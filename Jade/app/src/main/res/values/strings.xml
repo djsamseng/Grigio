@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Jade</string>
+    <string name="url_default">http://192.168.1.220:4000</string>
+    <string name="url_button">Connect</string>
+    <string name="sound_generation_button">Generate Sound</string>
+    <string name="sound_generation_title">Generate Sound</string>
+    <string name="sound_generation_frequency_label">Frequency</string>
+</resources>
