@@ -1,0 +1,14 @@
+### cuda support
+numpy==1.20
+numba
+### WebRTC
+aiortc
+aiohttp
+av
+python-socketio[asyncio-client]
+asyncio
+### pyaudio
+wheel
+pyaudio
+### opencv
+opencv-python

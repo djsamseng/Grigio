@@ -3,7 +3,8 @@
 A companion for Pinot
 
 ## Requirements
-- Ubuntu 20.04.3 LTS 64-bit Nvidia RTX 3090 
+- Ubuntu 20.04.3 LTS 64-bit Nvidia RTX 3090
+- Webcam
 - Total Wireless LG K31 Rebel Prepaid Smartphone
   - [Best Buy](https://www.bestbuy.com/site/total-wireless-lg-k31-rebel-prepaid/6444063.p?skuId=6444063&ref=212&loc=1&ref=212&loc=1&gclid=Cj0KCQjw-NaJBhDsARIsAAja6dPbySg3K3DWoG9a5rCGf3GOqX3ntnJa2rwmFQ7xNhtysT7ztk1mUa8aAorpEALw_wcB&gclsrc=aw.ds)
 - Arduino Nano 33 Iot
@@ -38,14 +39,37 @@ A companion for Pinot
 
 Note that socket.io versions need to be compatible. Here we use JS Socket.IO 4.x, python-socketio 5.x, and python-engineio 4.x
 
-### Server
+### server
 ```bash
 $ cd server && yarn install
 ```
 
+### pycli
+```bash
+$ cd pycli
+$ apt-get install python3-pyaudio portaudio19-dev # pyaudio dependencies
+$ python -m venv env
+$ source ./env/bin/activate
+$ pip install -r requirements.txt
+```
+
+### android
+- Install the Android 11.0 (R) API 30 SDK from Android Studio, Tools, SDK Manager
+- The first time running the app will likely fail. Go into setting on the phone, Apps, Permission manager, Camera, Jade, See all Jade permissions, and grant Camera, Microphone and Storage permissions.
+
 ## Run
 
-### Server
+### server
 ```bash
 $ cd server && yarn build && yarn start
 ```
+
+### pycli
+```bash
+$ python3 main.py # python 3.8.10
+$ pkill -9 python3 # sometimes needed to fully close and unlock the camera
+```
+
+### android
+- Connect the android phone, unlock the phone and trust the computer and select the phone in android studio (LGE LGL355DL) and run
+
