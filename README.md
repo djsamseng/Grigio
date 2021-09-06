@@ -35,3 +35,17 @@ A companion for Pinot
   - [Amazon](https://www.amazon.com/dp/B00B3SG796?psc=1&ref=ppx_yo2_dt_b_product_details)
 
 ## Installation
+
+Note that socket.io versions need to be compatible. Here we use JS Socket.IO 4.x, python-socketio 5.x, and python-engineio 4.x
+
+### Server
+```bash
+$ cd server && yarn install
+```
+
+## Run
+
+### Server
+```bash
+$ cd server && yarn build && yarn start
+```
