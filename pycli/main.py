@@ -183,6 +183,7 @@ async def createPeerConnection():
 
                 except Exception as e:
                     print("Error receiving audio:", e)
+                    raise e
 
         if track.kind == "video":
             while True:
@@ -194,6 +195,7 @@ async def createPeerConnection():
                     cv2.waitKey(5)
                 except Exception as e:
                     print("Error receiving track", e)
+                    raise e
 
     @pc.on("connectionstatechange")
     def on_connectionstatechange():

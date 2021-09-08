@@ -8,7 +8,8 @@ import android.view.View;
 import android.widget.EditText;
 
 public class MainActivity extends AppCompatActivity {
-    public static final String EXTRA_MESSAGE = "com.example.jade.MESSAGE";
+    public static final String INTENT_URL_KEY = "com.example.jade.URL";
+    public static final String INTENT_ROOM_KEY = "com.example.jade.ROOM";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -20,7 +21,8 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, JadeControllerActivity.class);
         EditText editText = (EditText) findViewById(R.id.editTextTextPersonName);
         String message = editText.getText().toString();
-        intent.putExtra(EXTRA_MESSAGE, message);
+        intent.putExtra(INTENT_URL_KEY, message);
+        intent.putExtra(INTENT_ROOM_KEY, "foo");
         startActivity(intent);
     }
 

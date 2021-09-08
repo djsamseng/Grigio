@@ -41,8 +41,8 @@ import static org.webrtc.SessionDescription.Type.OFFER;
 
 public class WebRTCProxy {
     private static final String TAG = "WebRTCProxy";
-    private static final String ROOM_NAME = "foo";
-    public static final String VIDEO_TRACK_ID = "ARDAMSv0";
+    public static final String VIDEO_TRACK_ID = "VIDEO_TRACK_ID1";
+    public static final String MEDIA_STREAM_ID = "MEDIA_STREAM_ID1";
     public static final int VIDEO_RESOLUTION_WIDTH = 1280;
     public static final int VIDEO_RESOLUTION_HEIGHT = 720;
     public static final int FPS = 30;
@@ -55,6 +55,8 @@ public class WebRTCProxy {
     private AudioSource audioSource;
     private AudioTrack localAudioTrack;
     private VideoTrack videoTrackFromCamera;
+    VideoCapturer videoCapturer;
+    VideoSource videoSource;
 
     private boolean isInitiator = false;
     private boolean streamingVideo = false;
@@ -68,14 +70,25 @@ public class WebRTCProxy {
         createVideoTrackFromCamera(context);
     }
 
-    public void start(String url, Context context) {
+    public void start(String url, String roomName, Context context) {
         String[] permissions = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
 
 
         initializePeerConnections();
-        connectToServer(url);
+        connectToServer(url, roomName);
         socket.emit("ready");
+    }
 
+    public void close() {
+        if (socket.connected()) {
+            socket.disconnect();
+        }
+        videoTrackFromCamera.setEnabled(false);
+        videoTrackFromCamera.dispose();
+        localAudioTrack.setEnabled(false);
+        localAudioTrack.dispose();
+        videoCapturer.dispose();
+        videoSource.dispose();
     }
 
     private boolean logAndThrow(String str) throws Exception {
@@ -125,13 +138,13 @@ public class WebRTCProxy {
         peerConnectionFactory.setVideoHwAccelerationOptions(rootEglBase.getEglBaseContext(), rootEglBase.getEglBaseContext());
     }
 
-    private boolean connectToServer(String url) {
+    private boolean connectToServer(String url, String roomName) {
         try {
             Log.d(TAG, "Connecting to:" + url);
             socket = IO.socket(url);
             socket.on(EVENT_CONNECT, args -> {
-                Log.d(TAG, "Connected to:" + url + ". Creating or joining room:" + ROOM_NAME);
-                socket.emit("create or join", ROOM_NAME);
+                Log.d(TAG, "Connected to:" + url + ". Creating or joining room:" + roomName);
+                socket.emit("create or join", roomName);
             }).on("created", args -> {
                 Log.d(TAG, "Created room. Becoming initiator");
                 isInitiator = true;
@@ -157,8 +170,6 @@ public class WebRTCProxy {
                 Log.d(TAG, "Joined room");
             }).on("join", args -> {
                 Log.d(TAG, "Another peer has joined the room");
-            }).on("message", args -> {
-                Log.e(TAG, "DROPPING MESSAGE:" + args);
             }).on("offer", args -> {
                 Log.e(TAG, "GOT OFFER:" + args);
                 try {
@@ -269,7 +280,7 @@ public class WebRTCProxy {
     private void createVideoTrackFromCamera(Context context) {
         MediaConstraints audioConstraints = new MediaConstraints();
         VideoCapturer videoCapturer = createVideoCapturer(context);
-        VideoSource videoSource = peerConnectionFactory.createVideoSource(videoCapturer);
+        videoSource = peerConnectionFactory.createVideoSource(videoCapturer);
         videoCapturer.startCapture(VIDEO_RESOLUTION_WIDTH, VIDEO_RESOLUTION_HEIGHT, FPS);
 
         videoTrackFromCamera = peerConnectionFactory.createVideoTrack(VIDEO_TRACK_ID, videoSource);
@@ -282,7 +293,7 @@ public class WebRTCProxy {
     }
 
     private VideoCapturer createVideoCapturer(Context context) {
-        VideoCapturer videoCapturer;
+
         videoCapturer = createCameraCapturer(new Camera2Enumerator(context));
         //videoCapturer = createCameraCapturer(new Camera1Enumerator(true));
         return videoCapturer;
@@ -415,7 +426,7 @@ public class WebRTCProxy {
             Log.e(TAG, "Already streaming video");
             return;
         }
-        MediaStream mediaStream = peerConnectionFactory.createLocalMediaStream("ARDAMS");
+        MediaStream mediaStream = peerConnectionFactory.createLocalMediaStream(MEDIA_STREAM_ID);
         mediaStream.addTrack(videoTrackFromCamera);
         mediaStream.addTrack(localAudioTrack);
         peerConnection.addStream(mediaStream);
