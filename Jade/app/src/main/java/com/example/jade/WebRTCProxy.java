@@ -138,6 +138,8 @@ public class WebRTCProxy {
             }).on("isinitiator", args -> {
                 Log.d(TAG, "Becoming initiator");
                 isInitiator = true;
+                streamingVideo = false;
+                peerConnection = null;
                 initializePeerConnections();
             }).on("ready", args -> {
                 Log.d(TAG, "Received ready");
