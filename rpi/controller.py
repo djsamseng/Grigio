@@ -12,7 +12,7 @@ sio = socketio.AsyncClient()
 @sio.on("motor")
 async def on_motor(data):
     print("Received on_motor:", data)
-    # motorController.motors(int(data["left"]), int(data["right"]))
+    motorController.set_motors(int(data["left"]), int(data["right"]))
 
 async def main():
     await sio.connect(SERVER_URL)
