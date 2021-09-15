@@ -22,6 +22,8 @@ import time
 
 import pyaudio
 
+from inputs import get_gamepad
+
 sio = socketio.AsyncClient()
 
 ## GLOBALS
@@ -290,6 +292,43 @@ async def on_frame(data):
     cv2.waitKey(5)
 
 
+throttle_down = 0
+joystick_right = 1020/2
+joystick_down = 1020/2
+async def check_joystick_events():
+    global throttle
+    global joystick_right
+    global joystick_down
+
+    events = get_gamepad()
+    THROTTLE = "ABS_Z" # Forward is 0, toward me is 255
+    JOYSTICK_RIGHT = "ABS_X" # Right is 1020, Left is 0
+    JOYSTICK_DOWN = "ABS_Y" # Towards me is 1020, Forward is 0
+    for evt in events:
+        if evt.code == THROTTLE:
+            throttle = 255 - evt.state
+        elif evt.code == JOYSTICK_RIGHT:
+            joystick_right = evt.state
+        elif evt.code == JOYSTICK_DOWN:
+            joystick_down = evt.state
+    
+    left = 0
+    right = 0
+    if throttle > 0:
+        left = throttle
+        right = throttle
+    data = {
+        "left": left,
+        "right": right,
+    }
+    
+    await sio.emit("motor", data)
+
+async def watch_joystick():
+    while True:
+        await check_joystick_events()
+        await asyncio.sleep(0.00001)
+
 async def main():
     await sio.connect("http://localhost:4000")
     print("My sid:", sio.sid)
@@ -299,6 +338,7 @@ async def main():
     # await sendMessage("got user media")
     await sio.emit("ready")
 
+    sio.start_background_task(watch_joystick)
     await sio.wait()
 
 async def close():

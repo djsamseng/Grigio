@@ -1,6 +1,6 @@
 import express, { Express } from "express";
 import cors from "cors";
-import { Server as SocketIOServer } from "socket.io";
+import { Server as SocketIOServer, Socket } from "socket.io";
 
 import router from "./routes/router";
 
@@ -15,6 +15,8 @@ const server = app.listen(PORT, () => {
 });
 
 const io = new SocketIOServer(server);
+
+const motorControllerSockets: Array<Socket> = [];
 
 io.on("connection", (socket) => {
     console.log("Got socket.io connection");
@@ -71,6 +73,16 @@ io.on("connection", (socket) => {
                 }
             }
 
+        }
+    });
+
+    // Motor control
+    socket.on("registerForMotorControl", () => {
+        motorControllerSockets.push(socket);
+    });
+    socket.on("motor", (data) => {
+        for (const motorSocket of motorControllerSockets) {
+            motorSocket.emit("motor", data);
         }
     });
 });
