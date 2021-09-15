@@ -312,14 +312,14 @@ async def check_joystick_events():
         elif evt.code == JOYSTICK_DOWN:
             joystick_down = evt.state
     
-    left = 0
-    right = 0
+    left_motor = 0
+    right_motor = 0
     if throttle > 0:
-        left = throttle + int(throttle * (1020/2 - joystick_right) / 1020)
-        right = throttle + int(throttle * (joystick_right - 1020/2) / 1020)
+        right_motor = throttle + int(throttle * (1020/2 - joystick_right) / 1020)
+        left_motor = throttle + int(throttle * (joystick_right - 1020/2) / 1020)
     data = {
-        "left": left,
-        "right": right,
+        "left": left_motor,
+        "right": right_motor,
     }
     await sio.emit("motor", data)
 
