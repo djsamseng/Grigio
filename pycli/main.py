@@ -292,7 +292,7 @@ async def on_frame(data):
     cv2.waitKey(5)
 
 
-throttle_down = 0
+throttle = 0
 joystick_right = 1020/2
 joystick_down = 1020/2
 async def check_joystick_events():
@@ -315,13 +315,12 @@ async def check_joystick_events():
     left = 0
     right = 0
     if throttle > 0:
-        left = throttle
-        right = throttle
+        left = throttle + int(throttle * (1020/2 - joystick_right) / 1020)
+        right = throttle + int(throttle * (joystick_right - 1020/2) / 1020)
     data = {
         "left": left,
         "right": right,
     }
-    
     await sio.emit("motor", data)
 
 async def watch_joystick():
