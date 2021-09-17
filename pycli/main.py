@@ -15,6 +15,7 @@ from aiortc import RTCPeerConnection,\
     MediaStreamTrack
 from aiortc.contrib.media import MediaPlayer, MediaRecorder
 
+import matplotlib.pyplot as plt
 from numba import cuda
 import numpy as np
 import os
@@ -291,6 +292,55 @@ async def on_frame(data):
     cv2.imshow("frame", data)
     cv2.waitKey(5)
 
+def configure_graph():
+    x_len = 1024 * 1
+    fig, (ax1, ax2) = plt.subplots(2, figsize=(15, 10))
+    x = np.arange(0, x_len)
+    line, = ax1.plot(x, np.random.rand(x_len), '-', lw=2)
+    line2, = ax2.plot(x, np.random.rand(x_len), '-', lw=2)
+    y_range = 500
+    ax1.set_title("Left Audio Waveform")
+    ax1.set_xlabel('samples')
+    ax1.set_ylabel('volume')
+    ax1.set_ylim(-y_range, y_range)
+    ax1.set_xlim(0, x_len)
+    y_ticks = np.arange(0, y_range, 1000)
+    plt.setp(ax1, xticks=[0, x_len, x_len], yticks=y_ticks)
+
+    ax2.set_title("Right Audio Waveform")
+    ax2.set_xlabel('samples')
+    ax2.set_ylabel('volume')
+    ax2.set_ylim(-y_range, y_range)
+    ax2.set_xlim(0, x_len)
+    plt.setp(ax2, xticks=[0, x_len, x_len], yticks=y_ticks)
+
+    fig.show()
+
+    return (x_len, fig, line, line2)
+
+do_graph = True
+if do_graph:
+    (x_len, fig, line, line2) = configure_graph()
+    itr = 0
+    to_graph = np.zeros(x_len)
+
+@sio.on("audiodata")
+async def on_audio_data(data):
+    global itr
+    global to_graph
+    try:
+        vals = data.split(",")
+        vals = np.array([int(v) for v in vals if v])
+        if do_graph:
+            if itr + len(vals) >= to_graph.shape[0]:
+                itr = 0
+            to_graph[itr:itr + len(vals)] = vals[:]
+            itr += len(vals)
+            line.set_ydata(to_graph)
+            fig.canvas.draw()
+            fig.canvas.flush_events()
+    except Exception as e:
+        print(e)
 
 throttle = 0
 joystick_right = 1020/2
@@ -326,7 +376,7 @@ async def check_joystick_events():
 async def watch_joystick():
     while True:
         await check_joystick_events()
-        await asyncio.sleep(0.00001)
+        await sio.sleep(0.00001)
 
 async def main():
     await sio.connect("http://localhost:4000")
@@ -336,8 +386,9 @@ async def main():
     await sio.emit("create or join", room)
     # await sendMessage("got user media")
     await sio.emit("ready")
-
-    sio.start_background_task(watch_joystick)
+    await sio.emit("registerForAudioData")
+    # get_gamepad hangs until an event arrives (requires moving the joystick)
+    # sio.start_background_task(watch_joystick)
     await sio.wait()
 
 async def close():

@@ -85,4 +85,12 @@ io.on("connection", (socket) => {
             motorSocket.emit("motor", data);
         }
     });
+
+    // Audio data
+    socket.on("registerForAudioData", () =>{
+        socket.join("audiodata");
+    })
+    socket.on("audiodata", (data) => {
+        io.sockets.in("audiodata").emit("audiodata", data);
+    });
 });

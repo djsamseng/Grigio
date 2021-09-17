@@ -12,3 +12,4 @@ wheel
 pyaudio
 ### opencv
 opencv-python
+matplotlib
