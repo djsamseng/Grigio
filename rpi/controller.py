@@ -22,11 +22,10 @@ async def on_motor(data):
 async def read_arduino():
     ser = serial.Serial(PORT, BAUDRATE)
     while True:
+        await sio.sleep(0.001)
         try:
             val = ser.readline().decode("UTF-8").strip("\r\n")
-            vals = val.split(",")
-            vals = np.array([int(v) for v in vals if v])
-            print(vals)
+            await sio.emit("audiodata", val)
         except Exception as e:
             print(e)
             continue
