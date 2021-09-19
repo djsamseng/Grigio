@@ -2,3 +2,7 @@ python-socketio[asyncio-client]
 asyncio
 numpy
 pyserial
+### WebRTC
+aiortc
+aiohttp
+av
