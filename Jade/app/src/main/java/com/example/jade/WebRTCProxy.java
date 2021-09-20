@@ -174,7 +174,7 @@ public class WebRTCProxy {
                 Log.e(TAG, "GOT OFFER:" + args);
                 try {
                     if (canOfferOrAnswer()) {
-                        JSONObject message = (JSONObject) args[0];
+                        JSONObject message = new JSONObject((String) args[0]);
                         peerConnection.setRemoteDescription(
                                 new SimpleSdpObserver(),
                                 new SessionDescription(OFFER, message.getString("sdp")));
@@ -189,7 +189,7 @@ public class WebRTCProxy {
             }).on("answer", args -> {
                 Log.e(TAG, "GOT ANSWER:" + args);
                 try {
-                    JSONObject message = (JSONObject) args[0];
+                    JSONObject message = new JSONObject((String) args[0]);
                     peerConnection.setRemoteDescription(new SimpleSdpObserver(),
                             new SessionDescription(ANSWER, message.getString("sdp")));
                 }
@@ -358,7 +358,6 @@ public class WebRTCProxy {
             public void onIceCandidate(IceCandidate iceCandidate) {
                 Log.d(TAG, "onIceCandidate: ");
                 JSONObject message = new JSONObject();
-
                 try {
                     message.put("type", "candidate");
                     message.put("label", iceCandidate.sdpMLineIndex);

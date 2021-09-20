@@ -13,6 +13,7 @@ from aiortc import RTCPeerConnection,\
     sdp,\
     MediaStreamTrack
 from aiortc.contrib.media import MediaPlayer, MediaRecorder
+from aiortc.contrib.signaling import object_to_string, object_from_string
 
 from romi_controller import RomiMotorController
 
@@ -40,7 +41,7 @@ async def addTracks():
             player.audio.stop()
 
     player = MediaPlayer('/dev/video0', format='v4l2', options={
-        'video_size': '320x240'
+        'video_size': '640x360'
     })
     add_player(pc, player)
 
@@ -49,20 +50,24 @@ async def addTracks():
 @sio.on("offer")
 async def on_offer(data):
     print("GOT OFFER:", data)
-    await pc.setRemoteDescription(
-        RTCSessionDescription(
-            sdp=data["sdp"], type=data["type"]
+    try:
+        obj = object_from_string(data)
+        if isinstance(obj, RTCSessionDescription):
+            await pc.setRemoteDescription(obj)
+    except Exception as e:
+        print("Could not decompose offer into session description directly")
+        await pc.setRemoteDescription(
+            RTCSessionDescription(
+                sdp=data["sdp"], type=data["type"]
+            )
         )
-    )
+    
     await addTracks()
     localDesc = await pc.createAnswer()
     print("CREATED LOCAL DESC:", localDesc)
     await pc.setLocalDescription(localDesc)
     print("SENDING MESSAGE: on_offer", localDesc.type)
-    await sio.emit("answer", {
-        "sdp": localDesc.sdp,
-        "type": localDesc.type
-    })
+    await sio.emit("answer", object_to_string(pc.localDescription))
 
 didGetAnswer = False
 @sio.on("answer")
@@ -72,11 +77,17 @@ async def on_answer(data):
         return
     didGetAnswer = True
     print("GOT ANSWER:", data)
-    await pc.setRemoteDescription(
-        RTCSessionDescription(
-            sdp=data["sdp"], type=data["type"]
+    try:
+        obj = object_from_string(data)
+        if isinstance(obj, RTCSessionDescription):
+            await pc.setRemoteDescription(obj)
+    except Exception as e:
+        print("Could not decompose answer into session description directly")
+        await pc.setRemoteDescription(
+            RTCSessionDescription(
+                sdp=data["sdp"], type=data["type"]
+            )
         )
-    )
 
 @sio.on("candidate")
 async def on_candidate(data):
@@ -122,10 +133,7 @@ async def createOffer():
     print("Created local description")
     await pc.setLocalDescription(desc)
     print("SENDING MESSAGE: createOffer", desc.type)
-    await sio.emit("offer", {
-        "sdp": desc.sdp,
-        "type": desc.type
-    })
+    await sio.emit("offer", object_to_string(pc.localDescription))
 
 async def cleanup():
     global pc
@@ -189,7 +197,7 @@ async def main():
     await sio.emit("create or join", room)
     # await sendMessage("got user media")
     await sio.emit("ready")
-    sio.start_background_task(read_arduino)
+    # sio.start_background_task(read_arduino)
     await sio.wait()
 
 async def close():
