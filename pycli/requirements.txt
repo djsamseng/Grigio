@@ -10,6 +10,7 @@ asyncio
 ### pyaudio
 wheel
 pyaudio
+scipy
 ### opencv
 opencv-python
 matplotlib

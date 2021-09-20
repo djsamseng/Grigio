@@ -23,6 +23,7 @@ import os
 import time
 
 import pyaudio
+from scipy.io import wavfile
 
 from inputs import get_gamepad
 
@@ -42,25 +43,47 @@ class AudioReplayTrack(MediaStreamTrack):
         super().__init__()
         self.dataQueue = asyncio.Queue()
         self.itr = 0
+        self.openWave()
+        self.waveitr = 0
 
     async def recv(self):
         try:
             data = await self.dataQueue.get()
+            if True:
+                data = self.readWave()
+                audio_array = np.zeros((1, 1920), dtype='int16')
+                audio_array[0,:] = data[self.waveitr:self.waveitr+1920,0]
+                self.waveitr += 1920
+                frame = av.AudioFrame.from_ndarray(audio_array, 's16')
+                frame.sample_rate = 44100
+                frame.time_base = '1/44100'
+                frame.pts = self.itr
+                self.itr += 960 # TODO: Correctly increment base
+                return frame
+            
             audio_array = np.zeros((1, 1920), dtype='int16')
-            #audio_array[:,:] = data["data"][:,:]
-
+            audio_array[:,:] = data["data"][:,:]
             frame = av.AudioFrame.from_ndarray(audio_array, 's16')
             frame.sample_rate = 48000
             frame.time_base = '1/48000'
             frame.pts = data["pts"]
             self.itr += 960 # TODO: Correctly increment base
-
             return frame
         except Exception as e:
             print("AudioReplayTrack recv was called with Exception:", e)
 
     def addFrame(self, frame):
         self.dataQueue.put_nowait(frame)
+
+    def openWave(self):
+        (rate, self.wavedata) = wavfile.read("./Hello.wav")
+        print("RATE:", rate)
+
+    def readWave(self):
+        size = 1920
+        if self.waveitr + size >= self.wavedata.shape[0]:
+            self.waveitr = 0
+        return self.wavedata
 
     def stop(self):
         try:
@@ -157,7 +180,6 @@ async def createPeerConnection():
         global p_stream
         print("Received track:", track.kind)
         if track.kind == "audio":
-            return
             while True:
                 try:
                     frame = await track.recv()
@@ -171,7 +193,7 @@ async def createPeerConnection():
                             rate=48000,
                             output=True)
 
-                    do_transcribe = True
+                    do_transcribe = False
                     if do_transcribe:
                         resampled = resampler.resample(frame)
                         resampled_np = resampled.to_ndarray()
@@ -193,7 +215,7 @@ async def createPeerConnection():
 
 
                     as_np = as_np.astype(np.int16).tostring()
-                    #p_stream.write(as_np)
+                    p_stream.write(as_np)
 
                 except Exception as e:
                     print("Error receiving audio:", e)
@@ -223,8 +245,16 @@ async def addTracks():
             player.video.stop()
         if player.audio:
             player.audio.stop()
+    
+    SEND_ONLY = True
+    if SEND_ONLY:
+        transceiver = pc.addTransceiver("video", direction="recvonly")
+        audio_replay_track = AudioReplayTrack()
+        pc.addTrack(audio_replay_track)
 
-    player = MediaPlayer('/dev/video0', format='v4l2', options={
+        return
+
+    player = MediaPlayer('/dev/video0', format='alsa', options={
         'video_size': '640x360'
     })
     add_player(pc, player)
