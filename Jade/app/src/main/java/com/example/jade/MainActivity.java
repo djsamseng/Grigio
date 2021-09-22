@@ -30,4 +30,9 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, SoundGenerationActivity.class);
         startActivity(intent);
     }
+
+    public void onFocusButtonPress(View view) {
+        Intent intent = new Intent(this, CameraFocusActivity.class);
+        startActivity(intent);
+    }
 }

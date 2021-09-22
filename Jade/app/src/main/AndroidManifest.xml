@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-feature android:name="android.hardware.camera.autofocus" />
 
     <application
         android:allowBackup="true"
@@ -38,9 +39,19 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainAcitivity" />
         </activity>
-        <activity android:name=".SoundGenerationActivity"
+        <activity
+            android:name=".SoundGenerationActivity"
             android:parentActivityName=".MainActivity"
             android:screenOrientation="portrait">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainAcitivity" />
+        </activity>
+        <activity
+            android:name=".CameraFocusActivity"
+            android:parentActivityName=".MainActivity"
+            android:screenOrientation="portrait"
+            android:exported="true">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainAcitivity" />
