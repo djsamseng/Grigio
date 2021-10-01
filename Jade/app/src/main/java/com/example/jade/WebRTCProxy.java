@@ -2,6 +2,7 @@ package com.example.jade;
 
 import android.Manifest;
 import android.content.Context;
+import android.media.AudioManager;
 import android.se.omapi.Session;
 import android.util.Log;
 import android.view.SurfaceView;
@@ -278,6 +279,8 @@ public class WebRTCProxy {
     }
 
     private void createVideoTrackFromCamera(Context context) {
+        AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        audioManager.setSpeakerphoneOn(true);
         MediaConstraints audioConstraints = new MediaConstraints();
         VideoCapturer videoCapturer = createVideoCapturer(context);
         videoSource = peerConnectionFactory.createVideoSource(videoCapturer);

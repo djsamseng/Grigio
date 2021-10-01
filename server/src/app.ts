@@ -3,11 +3,13 @@ import cors from "cors";
 import { Server as SocketIOServer, Socket } from "socket.io";
 
 import router from "./routes/router";
+import exp from "constants";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
+app.use(express.json());
 app.use(router);
 
 const server = app.listen(PORT, () => {
@@ -17,6 +19,13 @@ const server = app.listen(PORT, () => {
 const io = new SocketIOServer(server);
 
 const motorControllerSockets: Array<Socket> = [];
+const brainControlSockets: Array<Socket> = [];
+
+router.put("/control", (req, resp) => {
+    console.log("Control:", req.body);
+    io.sockets.in("braincontrol").emit("braincontrol", req.body);
+    resp.send({});
+});
 
 io.on("connection", (socket) => {
     console.log("Got socket.io connection");
@@ -92,5 +101,10 @@ io.on("connection", (socket) => {
     })
     socket.on("audiodata", (data) => {
         io.sockets.in("audiodata").emit("audiodata", data);
+    });
+
+    // Control data
+    socket.on("registerForBrainControl", () => {
+        socket.join("braincontrol");
     });
 });

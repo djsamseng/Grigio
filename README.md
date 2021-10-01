@@ -44,6 +44,11 @@ Note that socket.io versions need to be compatible. Here we use JS Socket.IO 4.x
 $ cd server && yarn install
 ```
 
+### Client
+```bash
+$ cd client && yarn install
+```
+
 ### pycli
 ```bash
 $ cd pycli
@@ -63,6 +68,12 @@ $ pip install -r requirements.txt
 ```bash
 $ cd server && yarn build && yarn start
 ```
+
+### client
+```bash
+$ cd client && yarn start
+```
+http://localhost:3000
 
 ### pycli
 ```bash

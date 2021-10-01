@@ -43,20 +43,27 @@ class AudioReplayTrack(MediaStreamTrack):
         super().__init__()
         self.dataQueue = asyncio.Queue()
         self.itr = 0
-        self.openWave()
+        self.is_playing = False
+        self.wavedata = np.array([])
+        self.rate = 44100
         self.waveitr = 0
 
     async def recv(self):
         try:
-            data = await self.dataQueue.get()
+            data_old = await self.dataQueue.get()
             if True:
                 data = self.readWave()
-                audio_array = np.zeros((1, 1920), dtype='int16')
-                audio_array[0,:] = data[self.waveitr:self.waveitr+1920,0]
-                self.waveitr += 1920
-                frame = av.AudioFrame.from_ndarray(audio_array, 's16')
-                frame.sample_rate = 44100
-                frame.time_base = '1/44100'
+                end = min(self.waveitr + 1280, len(data))
+                inc = end - self.waveitr
+                audio_array = np.zeros((1, 1280), dtype='int16')
+                if self.is_playing:
+                    audio_array[0,:inc] = data[self.waveitr:self.waveitr+inc]
+                    print(self.waveitr, ":", self.waveitr+inc)
+                    print(len(data))
+                self.waveitr += inc
+                frame = av.AudioFrame.from_ndarray(audio_array, 's16', layout='mono')
+                frame.sample_rate = self.rate
+                frame.time_base = '1/' + str(self.rate)
                 frame.pts = self.itr
                 self.itr += 960 # TODO: Correctly increment base
                 return frame
@@ -75,14 +82,18 @@ class AudioReplayTrack(MediaStreamTrack):
     def addFrame(self, frame):
         self.dataQueue.put_nowait(frame)
 
-    def openWave(self):
-        (rate, self.wavedata) = wavfile.read("./Hello.wav")
-        print("RATE:", rate)
+    def openWave(self, filename):
+        self.is_playing = True
+        self.waveitr = 0
+        (self.rate, self.wavedata) = wavfile.read(filename)
+        if len(self.wavedata.shape) > 1:
+            self.wavedata = self.wavedata[:,0]
+        print("RATE:", self.rate)
 
     def readWave(self):
         size = 1920
-        if self.waveitr + size >= self.wavedata.shape[0]:
-            self.waveitr = 0
+        if self.waveitr >= self.wavedata.shape[0]:
+            self.is_playing = False
         return self.wavedata
 
     def stop(self):
@@ -248,7 +259,8 @@ async def addTracks():
     
     SEND_ONLY = True
     if SEND_ONLY:
-        transceiver = pc.addTransceiver("video", direction="recvonly")
+        #transceiver = pc.addTransceiver("video", direction="recvonly")
+        
         audio_replay_track = AudioReplayTrack()
         pc.addTrack(audio_replay_track)
 
@@ -380,6 +392,18 @@ async def on_audio_data(data):
     except Exception as e:
         print(e)
 
+@sio.on("braincontrol")
+async def on_brain_control(data):
+    print("BRAIN:", data)
+    if "speak" in data:
+        print("SPEAK:", data["speak"])
+        text = data["speak"].lower()
+        filename = text + ".wav"
+        if os.path.exists(filename):
+            audio_replay_track.openWave(filename)
+        else:
+            print("Cannot speak: no file")
+
 throttle = 0
 joystick_right = 1020/2
 joystick_down = 1020/2
@@ -425,6 +449,7 @@ async def main():
     # await sendMessage("got user media")
     await sio.emit("ready")
     await sio.emit("registerForAudioData")
+    await sio.emit("registerForBrainControl")
     # get_gamepad hangs until an event arrives (requires moving the joystick)
     # sio.start_background_task(watch_joystick)
     await sio.wait()
