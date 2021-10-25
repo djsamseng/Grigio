@@ -13,8 +13,8 @@ from aiortc import RTCPeerConnection,\
 from aiortc.contrib.media import MediaPlayer, MediaRecorder
 from aiortc.contrib.signaling import object_to_string, object_from_string
 
+import base64
 import cv2
-import multiprocessing
 import numpy as np
 import os
 import pyaudio
@@ -116,6 +116,14 @@ class SocketIOManager():
                 '''
             except Exception as e:
                 print(e)
+
+        @sio.on("frame")
+        async def on_frame(data):
+            data = base64.b64decode(data)
+            data = np.frombuffer(data, dtype=np.uint8)
+            data = cv2.imdecode(data, flags=cv2.IMREAD_COLOR)
+            cv2.imshow("frame", data)
+            cv2.waitKey(5)
 
 class WebRTCManager():
     def __init__(self) -> None:
