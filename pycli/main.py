@@ -1,5 +1,9 @@
 import asyncio
+import multiprocessing
 import socketio
+
+import connection_managers
+import joystick_managers
 
 import cv2
 import base64
@@ -25,6 +29,7 @@ import time
 import pyaudio
 from scipy.io import wavfile
 
+import multiprocessing
 from inputs import get_gamepad
 
 sio = socketio.AsyncClient()
@@ -51,21 +56,29 @@ class AudioReplayTrack(MediaStreamTrack):
     async def recv(self):
         try:
             data_old = await self.dataQueue.get()
+            
             if True:
                 data = self.readWave()
-                end = min(self.waveitr + 1280, len(data))
+                end = min(self.waveitr + 1280, data.shape[0])
                 inc = end - self.waveitr
+                layout = 'stereo'
                 audio_array = np.zeros((1, 1280), dtype='int16')
+                if layout == 'stereo':
+                    audio_array = np.zeros((1, 1280 * 2), dtype='int16')
                 if self.is_playing:
-                    audio_array[0,:inc] = data[self.waveitr:self.waveitr+inc]
+                    if layout == 'stereo':
+                        audio_array[0,:inc*2:2] = data[self.waveitr:self.waveitr+inc, 0]
+                        audio_array[0,1:inc*2:2] = data[self.waveitr:self.waveitr+inc, 1]
+                    else:
+                        audio_array[0,:inc] = data[self.waveitr:self.waveitr+inc, 0]
                     print(self.waveitr, ":", self.waveitr+inc)
-                    print(len(data))
+                    print(data.shape)
                 self.waveitr += inc
-                frame = av.AudioFrame.from_ndarray(audio_array, 's16', layout='mono')
+                frame = av.AudioFrame.from_ndarray(audio_array, 's16', layout=layout)
                 frame.sample_rate = self.rate
                 frame.time_base = '1/' + str(self.rate)
                 frame.pts = self.itr
-                self.itr += 960 # TODO: Correctly increment base
+                self.itr += 960 * 2 # TODO: Correctly increment base
                 return frame
             
             audio_array = np.zeros((1, 1920), dtype='int16')
@@ -86,8 +99,13 @@ class AudioReplayTrack(MediaStreamTrack):
         self.is_playing = True
         self.waveitr = 0
         (self.rate, self.wavedata) = wavfile.read(filename)
-        if len(self.wavedata.shape) > 1:
-            self.wavedata = self.wavedata[:,0]
+        if len(self.wavedata.shape) == 1:
+            print("Converting to stereo")
+            self.wavedata = np.repeat(
+                self.wavedata.reshape(-1, 1),
+                2,
+                axis=1
+            )
         print("RATE:", self.rate)
 
     def readWave(self):
@@ -398,16 +416,16 @@ async def on_brain_control(data):
     if "speak" in data:
         print("SPEAK:", data["speak"])
         text = data["speak"].lower()
-        filename = text + ".wav"
+        filename = "./wav/" + text + ".wav"
         if os.path.exists(filename):
             audio_replay_track.openWave(filename)
         else:
             print("Cannot speak: no file")
 
-throttle = 0
+throttle = 255//2
 joystick_right = 1020/2
 joystick_down = 1020/2
-async def check_joystick_events():
+def get_joystick_data():
     global throttle
     global joystick_right
     global joystick_down
@@ -418,7 +436,7 @@ async def check_joystick_events():
     JOYSTICK_DOWN = "ABS_Y" # Towards me is 1020, Forward is 0
     for evt in events:
         if evt.code == THROTTLE:
-            throttle = 255 - evt.state
+            throttle = 255//2 - evt.state
         elif evt.code == JOYSTICK_RIGHT:
             joystick_right = evt.state
         elif evt.code == JOYSTICK_DOWN:
@@ -426,21 +444,46 @@ async def check_joystick_events():
     
     left_motor = 0
     right_motor = 0
-    if throttle > 0:
-        right_motor = throttle + int(throttle * (1020/2 - joystick_right) / 1020)
-        left_motor = throttle + int(throttle * (joystick_right - 1020/2) / 1020)
+    right_motor = throttle + int(throttle * (1020/2 - joystick_right) / 1020)
+    left_motor = throttle + int(throttle * (joystick_right - 1020/2) / 1020)
     data = {
         "left": left_motor,
         "right": right_motor,
     }
-    await sio.emit("motor", data)
+    return data
 
-async def watch_joystick():
+def joystick_timeout(signum, frame):
+    raise Exception("Joystick timeout")
+
+def get_joystick_p2(joystick_queue):
     while True:
-        await check_joystick_events()
-        await sio.sleep(0.00001)
+        joystick_data = get_joystick_data()
+        joystick_queue.put(joystick_data)
+
+async def watch_joystick_process():
+    joystick_queue = multiprocessing.Queue()
+    p = multiprocessing.Process(target=get_joystick_p2, args=(joystick_queue,))
+    p.start()
+    while True:
+        await sio.sleep(0.001)
+        joystick_data = None
+        while not joystick_queue.empty():
+            joystick_data = joystick_queue.get_nowait()
+        if joystick_data is not None:
+            await sio.emit("motor", joystick_data)
 
 async def main():
+    joystick_manager = joystick_managers.JoystickManager()
+    webrtc_manager = connection_managers.WebRTCManager()
+    socketio_manager = connection_managers.SocketIOManager(
+        webrtc_manager, 
+        joystick_manager=joystick_manager
+    )
+    if True:
+        await socketio_manager.connect_sio()
+        while True:
+            await socketio_manager.tick(sleep_interval=0.001)
+    
     await sio.connect("http://localhost:4000")
     print("My sid:", sio.sid)
     room = "foo"
@@ -451,7 +494,7 @@ async def main():
     await sio.emit("registerForAudioData")
     await sio.emit("registerForBrainControl")
     # get_gamepad hangs until an event arrives (requires moving the joystick)
-    # sio.start_background_task(watch_joystick)
+    sio.start_background_task(watch_joystick_process)
     await sio.wait()
 
 async def close():
