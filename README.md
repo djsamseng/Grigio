@@ -62,6 +62,20 @@ $ pip install -r requirements.txt
 - Install the Android 11.0 (R) API 30 SDK from Android Studio, Tools, SDK Manager
 - The first time running the app will likely fail. Go into setting on the phone, Apps, Permission manager, Camera, Jade, See all Jade permissions, and grant Camera, Microphone and Storage permissions.
 
+### Audio files
+- [Text to voice generator](https://ttsmp3.com/) - Matthew voice
+- `ffmpeg -i input.mp3 output.wav` and save into the pycli folder
+
+### raspberry pi
+- [Setup instructions](https://www.sigmdel.ca/michel/ha/rpi/streaming_en.html)
+```bash
+$ sudo apt-get install cmake libjpeg8-dev
+$ wget https://github.com/jacksonliam/mjpg-streamer/archive/master.zip
+$ unzip master.zip
+$ cd mjpeg-streamer-master/mjpg-streamer-experimental
+$ make
+$ sudo make install
+
 ## Run
 
 ### server
@@ -84,3 +98,12 @@ $ pkill -9 python3 # sometimes needed to fully close and unlock the camera
 ### android
 - Connect the android phone, unlock the phone and trust the computer and select the phone in android studio (LGE LGL355DL) and run
 
+### raspberry pi
+```bash
+$ /usr/local/bin/mjpg_streamer -i "/usr/local/lib/mjpg-streamer/input_uvc.so -d /dev/video0 -n -f 10 -r 1280x720" -o "/usr/local/lib/mjpg-streamer/output_http.so -p 8085 -w /usr/local/share/mjpg-streamer/www"
+```
+- Go to http://192.168.1.73:8085/stream.html
+```bash
+$ /usr/local/bin/mjpg_streamer -i "/usr/local/lib/mjpg-streamer/input_uvc.so -d /dev/video2 -n -f 10 -r 1280x720" -o "/usr/local/lib/mjpg-streamer/output_http.so -p 8086 -w /usr/local/share/mjpg-streamer/www"
+```
+- Go to http://192.168.1.73:8086/stream.html
