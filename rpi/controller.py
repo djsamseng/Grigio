@@ -183,7 +183,8 @@ async def read_arduino():
         await sio.sleep(0.001)
         try:
             val = ser.readline().decode("UTF-8").strip("\r\n")
-            await sio.emit("audiodata", val)
+            print(val)
+            #await sio.emit("audiodata", val)
         except Exception as e:
             print(e)
             continue
@@ -197,7 +198,7 @@ async def main():
     await sio.emit("create or join", room)
     # await sendMessage("got user media")
     await sio.emit("ready")
-    # sio.start_background_task(read_arduino)
+    sio.start_background_task(read_arduino)
     await sio.wait()
 
 async def close():

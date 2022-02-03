@@ -132,6 +132,7 @@ class WebRTCManager():
         self.last_video_frame = np.zeros((600, 800, 3)) # Changes
         self.last_audio_frame = np.zeros((1, 1920))
         self.audio_replay_track = AudioReplayTrack()
+        self.video_tracks_received = 0
 
     async def cleanup(self):
         await self.pc.close()
@@ -146,6 +147,7 @@ class WebRTCManager():
         self.pc = RTCPeerConnection()
         pc = self.pc
         print("Created RTCPeerConnection")
+        
         @pc.on("track")
         async def on_track(track):
             global p_stream
@@ -179,12 +181,15 @@ class WebRTCManager():
                         raise e
 
             if track.kind == "video":
+                self.video_tracks_received += 1
+                video_track_num = self.video_tracks_received
+                print("VIDEO TRACK:", video_track_num)
                 while True:
                     try:
                         frame = await track.recv()
                         img = frame.to_rgb().to_ndarray()
                         self.last_video_frame = img
-                        cv2.imshow("Android Camera", img)
+                        cv2.imshow("Android Camera:" + str(video_track_num), img)
                         cv2.waitKey(5)
                     except Exception as e:
                         print("Error receiving track", e)
@@ -254,7 +259,8 @@ class WebRTCManager():
             )
 
     async def addTracks(self):
-        
+        self.pc.addTransceiver("video", direction="recvonly")
+        self.pc.addTransceiver("video", direction="recvonly")
         self.pc.addTrack(self.audio_replay_track)
 
     def speek(self, text):

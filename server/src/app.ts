@@ -87,9 +87,11 @@ io.on("connection", (socket) => {
 
     // Motor control
     socket.on("registerForMotorControl", () => {
+        console.log("Registered for motor control!");
         motorControllerSockets.push(socket);
     });
     socket.on("motor", (data) => {
+        console.log("Motor:", data);
         for (const motorSocket of motorControllerSockets) {
             motorSocket.emit("motor", data);
         }
